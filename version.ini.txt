@@ -1,2 +1,0 @@
-Latest=1.2.0
-URL=https://github.com/tuo-utente/tuo-repo/releases/download/v1.2.0/update.zip
