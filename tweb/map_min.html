@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Flight's Map</title>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" type="image/x-icon" href="dep_map/asset/aereo_offline.png" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin="" />
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+        crossorigin=""></script>
+
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .legend {
+            padding: 6px 8px;
+            font: 14px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255, 255, 255, 0.8);
+            /*box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);*/
+            /*border-radius: 5px;*/
+            line-height: 24px;
+            color: #555;
+        }
+
+        .legend h4 {
+            /* text-align: center; */
+            font-size: 16px;
+            margin: 2px 12px 8px;
+            color: rgb(0, 0, 0);
+        }
+
+        .legend span {
+            position: relative;
+            bottom: 2px;
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin: 0 8px 0 0;
+            opacity: 0.7;
+        }
+
+        .button_map:hover {
+            opacity: 1;
+            cursor: pointer;
+        }
+
+        .button_map {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            top: 20px;
+            /* left: 8px; */
+            /* width: 31px;
+            height: 23px; */
+            background-color: white;
+            border-radius: 50px;
+            border-color: rgb(0, 0, 0);
+            border-style: solid;
+            border-width: 2px 2px 2px 2px;
+            opacity: 0.8;
+            text-align: center;
+            padding: 7px;
+            z-index: 500;
+            background-repeat: no-repeat;
+            background-size: auto;
+        }
+
+        #downloadButton {
+            top: 90px;
+        }
+
+        #airspacesButton {
+            right: 280px;
+        }
+
+        #cleanButton {
+            /*left: 85%;*/
+            right: 120px;
+        }
+
+        #hideLegendButton {
+            /*left: 90%;*/
+            right: 120px;
+        }
+
+        #mapViewButton {
+            /*left: 95%;*/
+            right: 40px;
+        }
+
+        .row,
+        .container {
+            display: flex;
+            align-items: end;
+            width: 100%;
+            /* top: 0; */
+            position: absolute;
+            /* padding: 1%; */
+            /* height: 40px; */
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <div class="row">
+        <div class="container">
+            <button id="cleanButton" class="button_map" title="Clean the track">
+                <img src="dep_map/asset/clean_ico.png" width="40" height="40">
+            </button>
+            <button id="mapViewButton" class="button_map" title="Change Map View">
+                <img src="dep_map/asset/view_map_ico.png" width="40" height="40">
+            </button>
+
+        </div>
+
+    </div>
+
+    <div id="map">
+    </div>
+
+    <script src="dep_map/leaflet-rotatedmarker/leaflet.rotatedMarker.js"></script>
+
+
+    <script>
+
+        //CONST
+
+        const base_lat = 42.37627313028105
+        const base_long = 13.310113976499471
+        const ZOOM_DEFAULT = 14
+        const MODE = 'DEBUG'
+
+        //VAR
+
+        var map;
+        var polylinePoint = []
+        var polyline
+        var polyArray = []
+
+        //LAYER MAP
+        var click_on_bt_view = 0
+
+        //BUTTON EVENT
+        document.getElementById("cleanButton").addEventListener("click", function () {
+            cleanTrack();
+
+        }, false);
+
+        document.getElementById("mapViewButton").addEventListener("click", function () {
+            ChangeView();
+
+        }, false);
+
+
+        //MAPPA
+        map = L.map('map').setView([base_lat, base_long], ZOOM_DEFAULT);
+
+
+        var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        })
+
+        var googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        }).addTo(map);
+
+
+        //PULSANTE CLEAN TRACK
+        function cleanTrack() {
+
+            polylinePoint = [];
+
+            for (let i = 0; i < polyArray.length; i++) {
+                polyArray[i].removeFrom(map);
+
+            }
+
+            polyArray = [];
+
+
+        }
+
+        //SATELLITE VIEW
+        function ChangeView() {
+
+            if (click_on_bt_view == 0) {
+                tiles.addTo(map)
+                googleSat.remove()
+                click_on_bt_view = 1
+            }
+            else {
+                googleSat.addTo(map)
+                tiles.remove()
+                click_on_bt_view = 0
+            }
+        }
+
+
+        //DA USARE ALL'INTERNO DI DELPHI
+
+
+        /**
+         * Resets the map and the marker to the initial position, cleans the track
+         */
+        function reset_map() {
+            cleanTrack();
+            map.setView([base_lat, base_long], ZOOM_DEFAULT);
+            //marker.setLatLng([base_lat, base_long]).bindPopup(bindPopup_text + base_lat + ", " + base_long + "</p>");
+        }
+
+        /**
+         * Adds a point to the polyline to be drawn on the map
+         * @param {number} lat_p - The latitude of the point to be added
+         * @param {number} long_p - The longitude of the point to be added
+         */
+        function add_point(lat_p, long_p) {
+
+            //AGGIUNGO PUNTO NELLA LISTA PER LA CREAZIONE DELLA POLYLINE
+            polylinePoint.push([lat_p, long_p])
+
+        }
+
+        /**
+         * Draws the polyline from the points added using add_point and resets the points array
+         * */
+        function draw_line() {
+
+            if (polylinePoint.length < 2) {
+                return;
+            }
+
+            //CREO POLYLINE SENZA AGGIUNGERLA NELLA MAPPA
+            let polyline = L.polyline(polylinePoint, {
+                color: 'red',
+                weight: 3,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            map.setView([polylinePoint[polylinePoint.length - 1][0], polylinePoint[polylinePoint.length - 1][1]], ZOOM_DEFAULT);
+
+
+            //AGGIUNGO LINE NELLA LISTA 
+            polyArray.push(polyline);
+
+
+            polylinePoint = [];
+        }
+
+
+
+
+
+        //DEBUG
+
+        if (MODE == 'DEBUG') {
+
+            //POLYLINE 1
+            const lat1 = 42.38518299443715
+            const long1 = 13.290019728352602
+            const lat2 = 42.37522886167048
+            const long2 = 13.329845164826834
+
+            //POLYLINE 2
+            const lat3 = 42.35449130258254
+            const long3 = 13.3064133886254
+            const lat4 = 42.37358025426066
+            const long4 = 13.36872646379844
+
+
+            add_point(lat1, long1)
+            add_point(lat2, long2)
+            draw_line();
+
+            add_point(lat3, long3)
+            add_point(lat4, long4)
+            draw_line();
+
+            
+
+    
+
+
+
+        }
+        else {
+            //console.log('NORMAL MODE')
+        }
+
+
+    </script>
+
+</body>
+
+</html>
